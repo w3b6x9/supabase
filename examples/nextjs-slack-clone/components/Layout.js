@@ -53,10 +53,21 @@ export default function Layout(props) {
           <h4 className="font-bold">Channels</h4>
           <ul className="channel-list">
             {props.channels.map((x) => (
-              <SidebarItem
+              <ChannelSidebarItem
                 channel={x}
                 key={x.id}
                 isActiveChannel={x.id === props.activeChannelId}
+              />
+            ))}
+          </ul>
+          <hr className="m-2" />
+          <h4 className="font-bold">Users</h4>
+          <ul className="channel-list">
+            {props.users.map((user) => (
+              <UserSidebarItem
+                username={user.username}
+                key={user.id}
+                isOnline={user.status === "ONLINE"}
               />
             ))}
           </ul>
@@ -69,12 +80,22 @@ export default function Layout(props) {
   )
 }
 
-const SidebarItem = ({ channel, isActiveChannel }) => (
+const ChannelSidebarItem = ({ channel, isActiveChannel }) => (
   <>
     <li>
       <Link href="/channels/[id]" as={`/channels/${channel.id}`}>
         <a className={isActiveChannel ? 'font-bold' : ''}>{channel.slug}</a>
       </Link>
+    </li>
+  </>
+)
+
+const UserSidebarItem = ({ username, isOnline }) => (
+  <>
+    <li className='flex items-center'>
+      <span className={isOnline ? 'rounded-full h-4 w-4 bg-green-500' : 'rounded-full h-4 w-4 bg-gray-500'} />
+      &nbsp;
+      <span className='overflow-x-auto'>{username}</span>
     </li>
   </>
 )

@@ -8,12 +8,12 @@ import UserContext from '~/lib/UserContext'
 
 const ChannelsPage = (props) => {
   const router = useRouter()
-  const { user, authLoaded, signOut } = useContext(UserContext)
+  const { user } = useContext(UserContext)
   const messagesEndRef = useRef(null)
 
   // Else load up the page
   const { id: channelId } = router.query
-  const { messages, channels } = useStore({ channelId })
+  const { messages, channels, users } = useStore({ user, channelId })
 
   useEffect(() => {
     messagesEndRef.current.scrollIntoView({
@@ -24,7 +24,7 @@ const ChannelsPage = (props) => {
 
   // Render the channels and messages
   return (
-    <Layout channels={channels} activeChannelId={channelId}>
+    <Layout channels={channels} activeChannelId={channelId} users={users}>
       <div className="relative h-screen">
         <div className="Messages h-full pb-16">
           <div className="p-2 overflow-y-auto">
