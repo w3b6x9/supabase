@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { Socket, Presence } from "phoenix"
+import { useDebouncedCallback } from 'use-debounce'
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,6 +16,8 @@ export const useStore = (props) => {
   const [users, setUsers] = useState(new Map())
   const [channels, setChannels] = useState([])
   const [messages, setMessages] = useState([])
+  const [socket, setSocket] = useState()
+  const [typingIndicatiorChannel, setTypingIndicatorChannel] = useState()
 
   const updateUser = (userId, user) => {
     setUsers((prevUsers) => {
@@ -22,6 +25,25 @@ export const useStore = (props) => {
       return new Map(prevUsers).set(userId, { ...existingUser, ...user })
     });
   }
+
+  const onDebouncedKeyDown = useDebouncedCallback(
+    () => {
+      const currentUserId = props.user?.id
+      onDebouncedKeyUp.cancel()
+      currentUserId && typingIndicatiorChannel?.push('typing_indicator', { user_id: currentUserId, is_typing: true })
+    },
+    600,
+    { leading: true, trailing: false }
+  )
+
+  const onDebouncedKeyUp = useDebouncedCallback(
+    () => {
+      const currentUserId = props.user?.id
+      onDebouncedKeyDown.cancel()
+      currentUserId && typingIndicatiorChannel?.push('typing_indicator', { user_id: currentUserId, is_typing: false })
+    },
+    600
+  )
 
   // Fetch initial data
   useEffect(() => {
@@ -41,6 +63,7 @@ export const useStore = (props) => {
       params: { user_id: currentUserId },
     })
     socket.connect()
+    setSocket(socket)
 
     userPresenceChannel = socket.channel("slack_clone:user_presence")
     userPresenceChannel.join()
@@ -48,7 +71,7 @@ export const useStore = (props) => {
     const userPresence = new Presence(userPresenceChannel)
 
     userPresence.onLeave((userId, current, _leftPres) => {
-      current.metas.length === 0 && updateUser(userId, { status: 'OFFLINE' })
+      current.metas.length === 0 && updateUser(userId, { status: 'OFFLINE', isTyping: false })
     })
 
     userPresence.onSync(() => {
@@ -62,7 +85,7 @@ export const useStore = (props) => {
       userPresenceChannel && userPresenceChannel.leave()
       socket && socket.disconnect()
     }
-  }, [props.user])
+  }, [props.user?.id])
 
   // Set up listeners
   useEffect(() => {
@@ -109,18 +132,33 @@ export const useStore = (props) => {
 
   // Update when the route changes
   useEffect(() => {
-    props.channelId && fetchMessages(props.channelId, (messages) => {
-      messages.forEach((x) => updateUser(x.user_id, (({ id, username }) => ({ id, username }))(x.author)))
-      setMessages(messages)
+    let typingIndicatiorChannel
+
+    if (!props.channelId || socket?.conn?.readyState !== 1) return
+
+    fetchMessages(props.channelId, setMessages)
+
+    typingIndicatiorChannel = socket.channel("slack_clone:typing_indicator:" + props.channelId)
+    typingIndicatiorChannel.on('typing_indicator', payload => {
+      updateUser(payload.user_id, { isTyping: payload.is_typing })
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.channelId])
+    typingIndicatiorChannel.join()
+    setTypingIndicatorChannel(typingIndicatiorChannel)
+
+    return () => {
+      onDebouncedKeyDown.cancel
+      onDebouncedKeyUp.cancel
+      typingIndicatiorChannel && typingIndicatiorChannel.leave()
+    }
+  }, [props.channelId, socket?.conn?.readyState])
 
   return {
     // We can export computed values here to map the authors to each message
     messages: messages.map((x) => ({ ...x, author: users.get(x.user_id) })),
     channels: channels.sort((a, b) => a.slug.localeCompare(b.slug)),
     users: [...users.values()].filter(user => user.id && user.username).sort((a, b) => a.username.localeCompare(b.username)),
+    onDebouncedKeyDown,
+    onDebouncedKeyUp
   }
 }
 

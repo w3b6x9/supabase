@@ -1,13 +1,30 @@
 import { useState } from 'react'
 
-const MessageInput = ({ onSubmit }) => {
+const MessageInput = ({ onSubmit, onDebouncedKeyDown, onDebouncedKeyUp }) => {
   const [messageText, setMessageText] = useState('')
 
-  const submitOnEnter = (event) => {
+  const onKeyDown = event => {    
     // Watch for enter key
-    if (event.keyCode === 13) {
-      onSubmit(messageText)
-      setMessageText('')
+    switch(event.keyCode) {
+      case 9:
+        break;
+      case 13:
+        onDebouncedKeyUp.flush()
+        onSubmit(messageText)
+        setMessageText('')
+        break;
+      default:
+        onDebouncedKeyDown()
+    }
+  }
+
+  const onKeyUp = event => {    
+    switch(event.keyCode) {
+      case 13:
+        onDebouncedKeyUp.cancel()
+        break;
+      default:
+        onDebouncedKeyUp()
     }
   }
 
@@ -19,7 +36,8 @@ const MessageInput = ({ onSubmit }) => {
         placeholder="Send a message"
         value={messageText}
         onChange={(e) => setMessageText(e.target.value)}
-        onKeyDown={(e) => submitOnEnter(e)}
+        onKeyDown={(e) => onKeyDown(e)}
+        onKeyUp={(e) => onKeyUp(e)}
       />
     </>
   )
