@@ -59,7 +59,7 @@ export const useStore = (props) => {
 
     if (!currentUserId) return
 
-    socket = new Socket("ws://localhost:4000/socket", {
+    socket = new Socket("wss://multiplayer-dev.fly.dev/socket", {
       params: { user_id: currentUserId },
     })
     socket.connect()
