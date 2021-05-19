@@ -65,7 +65,7 @@ export const useStore = (props) => {
     socket.connect()
     setSocket(socket)
 
-    userPresenceChannel = socket.channel("slack_clone:user_presence")
+    userPresenceChannel = socket.channel("room:user_presence")
     userPresenceChannel.join()
 
     const userPresence = new Presence(userPresenceChannel)
@@ -138,7 +138,7 @@ export const useStore = (props) => {
 
     fetchMessages(props.channelId, setMessages)
 
-    typingIndicatiorChannel = socket.channel("slack_clone:typing_indicator:" + props.channelId)
+    typingIndicatiorChannel = socket.channel("room:typing_indicator:" + props.channelId)
     typingIndicatiorChannel.on('typing_indicator', payload => {
       updateUser(payload.user_id, { isTyping: payload.is_typing })
     })
