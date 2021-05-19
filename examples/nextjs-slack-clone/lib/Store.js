@@ -30,7 +30,7 @@ export const useStore = (props) => {
     () => {
       const currentUserId = props.user?.id
       onDebouncedKeyUp.cancel()
-      currentUserId && typingIndicatiorChannel?.push('typing_indicator', { user_id: currentUserId, is_typing: true })
+      currentUserId && typingIndicatiorChannel?.push('broadcast', { user_id: currentUserId, is_typing: true })
     },
     600,
     { leading: true, trailing: false }
@@ -40,7 +40,7 @@ export const useStore = (props) => {
     () => {
       const currentUserId = props.user?.id
       onDebouncedKeyDown.cancel()
-      currentUserId && typingIndicatiorChannel?.push('typing_indicator', { user_id: currentUserId, is_typing: false })
+      currentUserId && typingIndicatiorChannel?.push('broadcast', { user_id: currentUserId, is_typing: false })
     },
     600
   )
@@ -132,15 +132,17 @@ export const useStore = (props) => {
 
   // Update when the route changes
   useEffect(() => {
-    let typingIndicatiorChannel
+    if (!props.channelId || !props.user?.id || socket?.conn?.readyState !== 1) return
 
-    if (!props.channelId || socket?.conn?.readyState !== 1) return
+    let typingIndicatiorChannel
+    const currentUserId = props.user?.id
 
     fetchMessages(props.channelId, setMessages)
 
     typingIndicatiorChannel = socket.channel("room:typing_indicator:" + props.channelId)
-    typingIndicatiorChannel.on('typing_indicator', payload => {
-      updateUser(payload.user_id, { isTyping: payload.is_typing })
+    typingIndicatiorChannel.on('broadcast', payload => {
+      const userId = payload?.user_id
+      userId && userId !== currentUserId && updateUser(userId, { isTyping: payload.is_typing })
     })
     typingIndicatiorChannel.join()
     setTypingIndicatorChannel(typingIndicatiorChannel)
@@ -150,7 +152,7 @@ export const useStore = (props) => {
       onDebouncedKeyUp.cancel
       typingIndicatiorChannel && typingIndicatiorChannel.leave()
     }
-  }, [props.channelId, socket?.conn?.readyState])
+  }, [props.channelId, props.user?.id, socket?.conn?.readyState])
 
   return {
     // We can export computed values here to map the authors to each message
