@@ -9,7 +9,7 @@ const TypingUsers = ({ users }) => {
   }
 
   return (
-    <div className="h-4 p-0.5 text-sm text-white">
+    <div className="h-5 p-0.5 text-sm text-white overflow-auto">
       {userTypingText}
     </div>
   )
